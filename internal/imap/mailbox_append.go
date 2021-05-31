@@ -18,6 +18,8 @@
 package imap
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/mail"
 	"strings"
@@ -29,6 +31,7 @@ import (
 	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
 	"github.com/emersion/go-imap"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // CreateMessage appends a new message to this mailbox. The \Recent flag will
@@ -50,6 +53,53 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 	m, _, _, readers, err := message.Parse(body)
 	if err != nil {
 		return err
+	}
+
+	logrus.Info(fmt.Sprintf("Found X-Keywords header: %s", m.Header.Get("X-Keywords")))
+
+	// Convert all X-Keywords labels names to IDs (creating if necessary)
+	labelNames := strings.Split(m.Header.Get("X-Keywords"), ",")
+	labels, err := im.user.client().ListLabels(context.Background())
+	labelIDs := []string{}
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		found := false
+		for _, keyword := range labelNames {
+			found = false
+			for _, label := range labels {
+				if label.Name == keyword {
+					labelIDs = append(labelIDs, label.ID)
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				// Create new Label and append ID
+				logrus.Warn(fmt.Sprintf("Label \"%s\" not found, creating...", keyword))
+				label := pmapi.Label{
+					Name:      keyword,
+					Path:      keyword,
+					Color:     pmapi.LeastUsedColor(pmapi.LabelColors),
+					Display:   0,
+					Exclusive: false,
+					Type:      1,
+					Notify:    false,
+				}
+				newLabel, err := im.user.client().CreateLabel(context.Background(), &label)
+				if err != nil {
+					logrus.Error(err)
+				} else {
+					logrus.Info(fmt.Sprintf("Created new label \"%s\" (ID: %s)", keyword, newLabel.ID))
+					labelIDs = append(labelIDs, newLabel.ID)
+				}
+			}
+		}
+
+		logrus.Info("Append the following label IDs to m.LabelIDs: -")
+		logrus.Info(labelIDs)
+		m.LabelIDs = append(m.LabelIDs, labelIDs...)
 	}
 
 	addr := im.storeAddress.APIAddress()
@@ -152,13 +202,24 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 				return err
 			}
 
+			// Add labels to messages that already exist
+			logrus.Info(fmt.Sprintf("Message already exists (ID: %s), adding labels...", internalID))
+			for _, labelID := range labelIDs {
+				logrus.Info(fmt.Sprintf("Adding label ID %s...", labelID))
+				im.user.client().LabelMessages(
+					context.Background(),
+					IDs,
+					labelID,
+				)
+			}
+
 			targetSeq := im.storeMailbox.GetUIDList(IDs)
 			return uidplus.AppendResponse(im.storeMailbox.UIDValidity(), targetSeq)
 		}
 	}
 
 	im.log.Info("Importing external message")
-	if err := im.importMessage(m, readers, kr); err != nil {
+	if err := im.importMessage(m, readers, kr, labelIDs); err != nil {
 		im.log.Error("Import failed: ", err)
 		return err
 	}
@@ -181,7 +242,7 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 	return uidplus.AppendResponse(im.storeMailbox.UIDValidity(), targetSeq)
 }
 
-func (im *imapMailbox) importMessage(m *pmapi.Message, readers []io.Reader, kr *crypto.KeyRing) (err error) {
+func (im *imapMailbox) importMessage(m *pmapi.Message, readers []io.Reader, kr *crypto.KeyRing, labelIDs []string) (err error) {
 	body, err := message.BuildEncrypted(m, readers, kr)
 	if err != nil {
 		return err
@@ -192,6 +253,11 @@ func (im *imapMailbox) importMessage(m *pmapi.Message, readers []io.Reader, kr *
 		if l == pmapi.StarredLabel {
 			labels = append(labels, pmapi.StarredLabel)
 		}
+	}
+
+	// Append extra labels
+	for _, l := range labelIDs {
+		labels = append(labels, l)
 	}
 
 	return im.storeMailbox.ImportMessage(m, body, labels)

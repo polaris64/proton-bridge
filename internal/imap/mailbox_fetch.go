@@ -307,6 +307,7 @@ func (im *imapMailbox) buildMessage(m *pmapi.Message) (*message.BodyStructure, [
 			AddExternalID:          true, // Whether to include ExternalID as X-Pm-External-Id.
 			AddMessageDate:         true, // Whether to include message time as X-Pm-Date.
 			AddMessageIDReference:  true, // Whether to include the MessageID in References.
+			AddXKeywords:           true, // Whether to include an "X-Keywords" header with all of the Message Labels.
 		},
 	).GetResult()
 	if err != nil {

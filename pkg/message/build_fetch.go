@@ -19,11 +19,13 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"sync"
 
 	"github.com/ProtonMail/proton-bridge/pkg/parallel"
 	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
+	"github.com/sirupsen/logrus"
 )
 
 type fetchReq struct {
@@ -42,6 +44,7 @@ type fetchRes struct {
 }
 
 func newFetchResSuccess(req fetchReq, msg *pmapi.Message, atts [][]byte) fetchRes {
+	msg.LabelNames = getMessageLabelStrings(req.api, msg)
 	return fetchRes{
 		fetchReq: req,
 		msg:      msg,
@@ -138,4 +141,23 @@ func fetchMessage(req fetchReq, attachWorkers int) (*pmapi.Message, [][]byte, er
 	}
 
 	return msg, attData, nil
+}
+
+func getMessageLabelStrings(api Fetcher, msg *pmapi.Message) []string {
+	logrus.Info(fmt.Sprintf("Fetching message labels names for message ID %s...", msg.ID))
+
+	labels, err := api.ListLabels(context.Background())
+	res := []string{}
+	if err != nil {
+		return res
+	}
+	for _, lid := range msg.LabelIDs {
+		for _, label := range labels {
+			if label.ID == lid {
+				res = append(res, label.Name)
+				break
+			}
+		}
+	}
+	return res
 }

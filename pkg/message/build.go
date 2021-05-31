@@ -43,6 +43,7 @@ type Fetcher interface {
 	GetMessage(context.Context, string) (*pmapi.Message, error)
 	GetAttachment(context.Context, string) (io.ReadCloser, error)
 	KeyRingForAddressID(string) (*crypto.KeyRing, error)
+	ListLabels(context.Context) ([]*pmapi.Label, error)
 }
 
 // NewBuilder creates a new builder which manages the given number of fetch/attach/build workers.

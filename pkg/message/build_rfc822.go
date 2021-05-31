@@ -32,6 +32,7 @@ import (
 	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
 	"github.com/emersion/go-message"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func buildRFC822(kr *crypto.KeyRing, msg *pmapi.Message, attData [][]byte, opts JobOptions) ([]byte, error) {
@@ -340,6 +341,12 @@ func getMessageHeader(msg *pmapi.Message, opts JobOptions) message.Header { // n
 	// This is important for us to detect whether APPENDed things are actually "move like outlook".
 	if opts.AddInternalID {
 		hdr.Set("X-Pm-Internal-Id", msg.ID)
+	}
+
+	// Add X-Keywords header based on the Message Labels
+	if opts.AddXKeywords {
+		logrus.Info("Adding X-Keywords to message headers...")
+		hdr.Set("X-Keywords", strings.Join(msg.LabelNames, ","))
 	}
 
 	// Set our external ID if requested.

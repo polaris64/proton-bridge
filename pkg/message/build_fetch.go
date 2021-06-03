@@ -88,8 +88,6 @@ func startFetchWorkers(fetchWorkers, attachWorkers int) (chan fetchReq, chan fet
 func fetchWorker(fetchReqCh <-chan fetchReq, fetchResCh chan<- fetchRes, attachWorkers int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// TODO: Prefetch all Labels from API
-
 	for req := range fetchReqCh {
 		msg, atts, err := fetchMessage(req, attachWorkers)
 		if err != nil {
@@ -150,11 +148,18 @@ func fetchMessage(req fetchReq, attachWorkers int) (*pmapi.Message, [][]byte, er
 func getMessageLabelStrings(api Fetcher, msg *pmapi.Message) []string {
 	logrus.Info(fmt.Sprintf("Fetching message labels names for message ID %s...", msg.ID))
 
-	labels, err := api.ListLabels(context.Background())
 	res := []string{}
-	if err != nil {
-		return res
+
+	var labels []*pmapi.Label
+	labels = api.GetLabelCache()
+	if len(labels) == 0 {
+		labels2, err := api.ListLabels(context.Background())
+		if err != nil {
+			return res
+		}
+		labels = labels2
 	}
+
 	for _, lid := range msg.LabelIDs {
 		for _, label := range labels {
 			if label.ID == lid {
@@ -163,5 +168,6 @@ func getMessageLabelStrings(api Fetcher, msg *pmapi.Message) []string {
 			}
 		}
 	}
+
 	return res
 }

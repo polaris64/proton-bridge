@@ -1232,6 +1232,7 @@ func TestBuildFetchMessageFail(t *testing.T) {
 	// Pretend the message cannot be fetched.
 	f := mocks.NewMockFetcher(m)
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(nil, errors.New("oops"))
+	f.EXPECT().GetLabelCache().MaxTimes(0)
 	f.EXPECT().ListLabels(gomock.Any()).MaxTimes(0)
 
 	// The job should fail, returning an error and a nil result.
@@ -1253,6 +1254,7 @@ func TestBuildFetchAttachmentFail(t *testing.T) {
 
 	// Pretend the attachment cannot be fetched.
 	f := mocks.NewMockFetcher(m)
+	f.EXPECT().GetLabelCache().Return([]*pmapi.Label{})
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
 	f.EXPECT().GetAttachment(gomock.Any(), msg.Attachments[0].ID).Return(nil, errors.New("oops"))
 	f.EXPECT().ListLabels(gomock.Any()).Return([]*pmapi.Label{}, nil)
@@ -1275,6 +1277,7 @@ func TestBuildNoSuchKeyRing(t *testing.T) {
 
 	// Pretend there is no available keyring.
 	f := mocks.NewMockFetcher(m)
+	f.EXPECT().GetLabelCache().Return([]*pmapi.Label{})
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
 	f.EXPECT().KeyRingForAddressID(msg.AddressID).Return(nil, errors.New("oops"))
 	f.EXPECT().ListLabels(gomock.Any()).Return([]*pmapi.Label{}, nil)
@@ -1299,6 +1302,7 @@ func TestBuildListLabelsFail(t *testing.T) {
 
 	// Pretend there was a problem fetching the Labels
 	f := mocks.NewMockFetcher(m)
+	f.EXPECT().GetLabelCache().Return([]*pmapi.Label{})
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
 	f.EXPECT().KeyRingForAddressID(msg.AddressID).Return(kr, nil)
 	f.EXPECT().ListLabels(gomock.Any()).Return(nil, errors.New("oops"))

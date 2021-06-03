@@ -52,6 +52,20 @@ func (mr *MockFetcherMockRecorder) GetAttachment(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttachment", reflect.TypeOf((*MockFetcher)(nil).GetAttachment), arg0, arg1)
 }
 
+// GetLabelCache mocks base method.
+func (m *MockFetcher) GetLabelCache() []*pmapi.Label {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLabelCache")
+	ret0, _ := ret[0].([]*pmapi.Label)
+	return ret0
+}
+
+// GetLabelCache indicates an expected call of GetLabelCache.
+func (mr *MockFetcherMockRecorder) GetLabelCache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLabelCache", reflect.TypeOf((*MockFetcher)(nil).GetLabelCache))
+}
+
 // GetMessage mocks base method.
 func (m *MockFetcher) GetMessage(arg0 context.Context, arg1 string) (*pmapi.Message, error) {
 	m.ctrl.T.Helper()

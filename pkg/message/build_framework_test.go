@@ -52,6 +52,7 @@ func newTestFetcher(
 	f.EXPECT().KeyRingForAddressID(msg.AddressID).Return(kr, nil)
 
 	f.EXPECT().ListLabels(gomock.Any()).Return([]*pmapi.Label{}, nil)
+	f.EXPECT().GetLabelCache().Return([]*pmapi.Label{})
 
 	return f
 }

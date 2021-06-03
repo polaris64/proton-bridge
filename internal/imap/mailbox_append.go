@@ -59,48 +59,53 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 
 	// Convert all X-Keywords labels names to IDs (creating if necessary)
 	labelNames := strings.Split(m.Header.Get("X-Keywords"), ",")
-	labels, err := im.user.client().ListLabels(context.Background())
+	var labels []*pmapi.Label
+	labels = im.user.client().GetLabelCache()
+	if len(labels) == 0 {
+		labels2, err := im.user.client().ListLabels(context.Background())
+		if err != nil {
+			logrus.Error(err)
+		} else {
+			labels = labels2
+		}
+	}
 	labelIDs := []string{}
-	if err != nil {
-		logrus.Error(err)
-	} else {
-		found := false
-		for _, keyword := range labelNames {
-			found = false
-			for _, label := range labels {
-				if label.Name == keyword {
-					labelIDs = append(labelIDs, label.ID)
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				// Create new Label and append ID
-				logrus.Warn(fmt.Sprintf("Label \"%s\" not found, creating...", keyword))
-				label := pmapi.Label{
-					Name:      keyword,
-					Path:      keyword,
-					Color:     pmapi.LeastUsedColor(pmapi.LabelColors),
-					Display:   0,
-					Exclusive: false,
-					Type:      1,
-					Notify:    false,
-				}
-				newLabel, err := im.user.client().CreateLabel(context.Background(), &label)
-				if err != nil {
-					logrus.Error(err)
-				} else {
-					logrus.Info(fmt.Sprintf("Created new label \"%s\" (ID: %s)", keyword, newLabel.ID))
-					labelIDs = append(labelIDs, newLabel.ID)
-				}
+	found := false
+	for _, keyword := range labelNames {
+		found = false
+		for _, label := range labels {
+			if label.Name == keyword {
+				labelIDs = append(labelIDs, label.ID)
+				found = true
+				break
 			}
 		}
 
-		logrus.Info("Append the following label IDs to m.LabelIDs: -")
-		logrus.Info(labelIDs)
-		m.LabelIDs = append(m.LabelIDs, labelIDs...)
+		if !found {
+			// Create new Label and append ID
+			logrus.Warn(fmt.Sprintf("Label \"%s\" not found, creating...", keyword))
+			label := pmapi.Label{
+				Name:      keyword,
+				Path:      keyword,
+				Color:     pmapi.LeastUsedColor(pmapi.LabelColors),
+				Display:   0,
+				Exclusive: false,
+				Type:      1,
+				Notify:    false,
+			}
+			newLabel, err := im.user.client().CreateLabel(context.Background(), &label)
+			if err != nil {
+				logrus.Error(err)
+			} else {
+				logrus.Info(fmt.Sprintf("Created new label \"%s\" (ID: %s)", keyword, newLabel.ID))
+				labelIDs = append(labelIDs, newLabel.ID)
+			}
+		}
 	}
+
+	logrus.Info("Append the following label IDs to m.LabelIDs: -")
+	logrus.Info(labelIDs)
+	m.LabelIDs = append(m.LabelIDs, labelIDs...)
 
 	addr := im.storeAddress.APIAddress()
 	if addr == nil {

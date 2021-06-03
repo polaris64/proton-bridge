@@ -44,7 +44,6 @@ type fetchRes struct {
 }
 
 func newFetchResSuccess(req fetchReq, msg *pmapi.Message, atts [][]byte) fetchRes {
-	msg.LabelNames = getMessageLabelStrings(req.api, msg)
 	return fetchRes{
 		fetchReq: req,
 		msg:      msg,
@@ -89,6 +88,8 @@ func startFetchWorkers(fetchWorkers, attachWorkers int) (chan fetchReq, chan fet
 func fetchWorker(fetchReqCh <-chan fetchReq, fetchResCh chan<- fetchRes, attachWorkers int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	// TODO: Prefetch all Labels from API
+
 	for req := range fetchReqCh {
 		msg, atts, err := fetchMessage(req, attachWorkers)
 		if err != nil {
@@ -104,6 +105,9 @@ func fetchMessage(req fetchReq, attachWorkers int) (*pmapi.Message, [][]byte, er
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Fetch Labels names for all Message Label IDs
+	msg.LabelNames = getMessageLabelStrings(req.api, msg)
 
 	attList := make([]interface{}, len(msg.Attachments))
 

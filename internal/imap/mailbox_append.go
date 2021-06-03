@@ -72,6 +72,7 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 	labelIDs := []string{}
 	found := false
 	for _, keyword := range labelNames {
+		keyword = strings.TrimSpace(keyword)
 		found = false
 		for _, label := range labels {
 			if label.Name == keyword {
@@ -209,6 +210,45 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 
 			// Add labels to messages that already exist
 			logrus.Info(fmt.Sprintf("Message already exists (ID: %s), adding labels...", internalID))
+			logrus.Info("Fetching existing message from API...")
+			apiMsg, err := im.user.client().GetMessage(
+				context.Background(),
+				internalID,
+			)
+			if err != nil {
+				logrus.Error(err)
+			} else {
+				logrus.Info("The message currently has the following labels")
+				logrus.Info(apiMsg.LabelIDs)
+
+				// Remove existing Message Labels which are not in labelNames
+				removeLabelIDs := []string{}
+				for _, exLabelID := range apiMsg.LabelIDs {
+					if !pmapi.IsSystemLabel(exLabelID) {
+						found := false
+						for _, newLabelID := range labelIDs {
+							if newLabelID == exLabelID {
+								found = true
+								break
+							}
+						}
+						if !found {
+							removeLabelIDs = append(removeLabelIDs, exLabelID)
+						}
+					}
+				}
+				logrus.Info("Removing the following labels: -")
+				logrus.Info(removeLabelIDs)
+				for _, remLabelID := range removeLabelIDs {
+					im.user.client().UnlabelMessages(
+						context.Background(),
+						IDs,
+						remLabelID,
+					)
+				}
+			}
+
+
 			for _, labelID := range labelIDs {
 				logrus.Info(fmt.Sprintf("Adding label ID %s...", labelID))
 				im.user.client().LabelMessages(

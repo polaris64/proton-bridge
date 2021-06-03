@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ProtonMail/proton-bridge/pkg/message/mocks"
+	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
 	tests "github.com/ProtonMail/proton-bridge/test"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -1231,6 +1232,7 @@ func TestBuildFetchMessageFail(t *testing.T) {
 	// Pretend the message cannot be fetched.
 	f := mocks.NewMockFetcher(m)
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(nil, errors.New("oops"))
+	f.EXPECT().ListLabels(gomock.Any()).MaxTimes(0)
 
 	// The job should fail, returning an error and a nil result.
 	res, err := b.NewJob(context.Background(), f, msg.ID).GetResult()
@@ -1253,6 +1255,7 @@ func TestBuildFetchAttachmentFail(t *testing.T) {
 	f := mocks.NewMockFetcher(m)
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
 	f.EXPECT().GetAttachment(gomock.Any(), msg.Attachments[0].ID).Return(nil, errors.New("oops"))
+	f.EXPECT().ListLabels(gomock.Any()).Return([]*pmapi.Label{}, nil)
 
 	// The job should fail, returning an error and a nil result.
 	res, err := b.NewJob(context.Background(), f, msg.ID).GetResult()
@@ -1274,6 +1277,7 @@ func TestBuildNoSuchKeyRing(t *testing.T) {
 	f := mocks.NewMockFetcher(m)
 	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
 	f.EXPECT().KeyRingForAddressID(msg.AddressID).Return(nil, errors.New("oops"))
+	f.EXPECT().ListLabels(gomock.Any()).Return([]*pmapi.Label{}, nil)
 
 	res, err := b.NewJob(context.Background(), f, msg.ID).GetResult()
 	assert.Error(t, err)
@@ -1281,4 +1285,24 @@ func TestBuildNoSuchKeyRing(t *testing.T) {
 
 	// The returned error should be of this specific type.
 	assert.True(t, errors.Is(err, ErrNoSuchKeyRing))
+}
+
+func TestBuildListLabelsFail(t *testing.T) {
+	m := gomock.NewController(t)
+	defer m.Finish()
+
+	b := NewBuilder(1, 1, 1)
+	defer b.Done()
+
+	kr := tests.MakeKeyRing(t)
+	msg := newTestMessage(t, kr, "messageID", "addressID", "text/plain", "body", time.Now())
+
+	// Pretend there was a problem fetching the Labels
+	f := mocks.NewMockFetcher(m)
+	f.EXPECT().GetMessage(gomock.Any(), msg.ID).Return(msg, nil)
+	f.EXPECT().KeyRingForAddressID(msg.AddressID).Return(kr, nil)
+	f.EXPECT().ListLabels(gomock.Any()).Return(nil, errors.New("oops"))
+
+	_, err := b.NewJob(context.Background(), f, msg.ID).GetResult()
+	assert.Nil(t, err)
 }

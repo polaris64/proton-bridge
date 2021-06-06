@@ -55,54 +55,8 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 		return err
 	}
 
-	logrus.Info(fmt.Sprintf("Found X-Keywords header: %s", m.Header.Get("X-Keywords")))
-
-	// Convert all X-Keywords labels names to IDs (creating if necessary)
-	labelNames := strings.Split(m.Header.Get("X-Keywords"), ",")
-	var labels []*pmapi.Label
-	labels = im.user.client().GetLabelCache()
-	if len(labels) == 0 {
-		labels2, err := im.user.client().ListLabels(context.Background())
-		if err != nil {
-			logrus.Error(err)
-		} else {
-			labels = labels2
-		}
-	}
-	labelIDs := []string{}
-	found := false
-	for _, keyword := range labelNames {
-		keyword = strings.TrimSpace(keyword)
-		found = false
-		for _, label := range labels {
-			if label.Name == keyword {
-				labelIDs = append(labelIDs, label.ID)
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			// Create new Label and append ID
-			logrus.Warn(fmt.Sprintf("Label \"%s\" not found, creating...", keyword))
-			label := pmapi.Label{
-				Name:      keyword,
-				Path:      keyword,
-				Color:     pmapi.LeastUsedColor(pmapi.LabelColors),
-				Display:   0,
-				Exclusive: false,
-				Type:      1,
-				Notify:    false,
-			}
-			newLabel, err := im.user.client().CreateLabel(context.Background(), &label)
-			if err != nil {
-				logrus.Error(err)
-			} else {
-				logrus.Info(fmt.Sprintf("Created new label \"%s\" (ID: %s)", keyword, newLabel.ID))
-				labelIDs = append(labelIDs, newLabel.ID)
-			}
-		}
-	}
+	apiCtx := context.Background()
+	labelIDs := getLabelIDsFromKeywords(m, im.user.client(), apiCtx)
 
 	logrus.Info("Append the following label IDs to m.LabelIDs: -")
 	logrus.Info(labelIDs)
@@ -210,53 +164,7 @@ func (im *imapMailbox) createMessage(flags []string, date time.Time, body imap.L
 
 			// Add labels to messages that already exist
 			logrus.Info(fmt.Sprintf("Message already exists (ID: %s), adding labels...", internalID))
-			logrus.Info("Fetching existing message from API...")
-			apiMsg, err := im.user.client().GetMessage(
-				context.Background(),
-				internalID,
-			)
-			if err != nil {
-				logrus.Error(err)
-			} else {
-				logrus.Info("The message currently has the following labels")
-				logrus.Info(apiMsg.LabelIDs)
-
-				// Remove existing Message Labels which are not in labelNames
-				removeLabelIDs := []string{}
-				for _, exLabelID := range apiMsg.LabelIDs {
-					if !pmapi.IsSystemLabel(exLabelID) {
-						found := false
-						for _, newLabelID := range labelIDs {
-							if newLabelID == exLabelID {
-								found = true
-								break
-							}
-						}
-						if !found {
-							removeLabelIDs = append(removeLabelIDs, exLabelID)
-						}
-					}
-				}
-				logrus.Info("Removing the following labels: -")
-				logrus.Info(removeLabelIDs)
-				for _, remLabelID := range removeLabelIDs {
-					im.user.client().UnlabelMessages(
-						context.Background(),
-						IDs,
-						remLabelID,
-					)
-				}
-			}
-
-
-			for _, labelID := range labelIDs {
-				logrus.Info(fmt.Sprintf("Adding label ID %s...", labelID))
-				im.user.client().LabelMessages(
-					context.Background(),
-					IDs,
-					labelID,
-				)
-			}
+			addCustomLabels(labelIDs, internalID, im.user.client(), apiCtx)
 
 			targetSeq := im.storeMailbox.GetUIDList(IDs)
 			return uidplus.AppendResponse(im.storeMailbox.UIDValidity(), targetSeq)
@@ -306,4 +214,110 @@ func (im *imapMailbox) importMessage(m *pmapi.Message, readers []io.Reader, kr *
 	}
 
 	return im.storeMailbox.ImportMessage(m, body, labels)
+}
+
+func getLabelIDsFromKeywords(m *pmapi.Message, api pmapi.Client, ctx context.Context) []string {
+	var keywordsHeader string
+	keywordsHeader = m.Header.Get("X-Keywords")
+	if len(keywordsHeader) == 0 {
+	    keywordsHeader = m.Header.Get("X-Label")
+	}
+	if len(keywordsHeader) == 0 {
+	    keywordsHeader = m.Header.Get("Keywords")
+	}
+	if len(keywordsHeader) == 0 {
+		return []string{}
+	}
+	logrus.Info(fmt.Sprintf("Found keywords: %s", keywordsHeader))
+
+	// Convert all keywords (label names) to IDs (creating if necessary)
+	labelNames := strings.Split(keywordsHeader, ",")
+	var labels []*pmapi.Label
+	labels = api.GetLabelCache()
+	if len(labels) == 0 {
+		labels2, err := api.ListLabels(ctx)
+		if err != nil {
+			logrus.Error(err)
+		} else {
+			labels = labels2
+		}
+	}
+	labelIDs := []string{}
+	found := false
+	for _, keyword := range labelNames {
+		keyword = strings.TrimSpace(keyword)
+		found = false
+		for _, label := range labels {
+			if label.Name == keyword {
+				labelIDs = append(labelIDs, label.ID)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// Create new Label and append ID
+			logrus.Warn(fmt.Sprintf("Label \"%s\" not found, creating...", keyword))
+			label := pmapi.Label{
+				Name:      keyword,
+				Path:      keyword,
+				Color:     pmapi.LeastUsedColor(pmapi.LabelColors),
+				Display:   0,
+				Exclusive: false,
+				Type:      1,
+				Notify:    false,
+			}
+			newLabel, err := api.CreateLabel(ctx, &label)
+			if err != nil {
+				logrus.Error(err)
+			} else {
+				logrus.Info(fmt.Sprintf("Created new label \"%s\" (ID: %s)", keyword, newLabel.ID))
+				labelIDs = append(labelIDs, newLabel.ID)
+			}
+		}
+	}
+	return labelIDs
+}
+
+
+func addCustomLabels(labelIDs []string, internalID string, api pmapi.Client, ctx context.Context) {
+	if len(labelIDs) == 0 {
+		return
+	}
+
+	apiMsg, err := api.GetMessage(ctx, internalID)
+
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		logrus.Info("The message currently has the following labels")
+		logrus.Info(apiMsg.LabelIDs)
+
+		// Remove existing Message Labels which are not in labelNames
+		removeLabelIDs := []string{}
+		for _, exLabelID := range apiMsg.LabelIDs {
+			if !pmapi.IsSystemLabel(exLabelID) {
+				found := false
+				for _, newLabelID := range labelIDs {
+					if newLabelID == exLabelID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					removeLabelIDs = append(removeLabelIDs, exLabelID)
+				}
+			}
+		}
+
+		for _, remLabelID := range removeLabelIDs {
+			logrus.Info(fmt.Sprintf("Removing label ID %s...", remLabelID))
+			api.UnlabelMessages(ctx, []string{internalID}, remLabelID)
+		}
+	}
+
+	for _, labelID := range labelIDs {
+		logrus.Info(fmt.Sprintf("Adding label ID %s...", labelID))
+		api.LabelMessages(ctx, []string{internalID}, labelID)
+	}
 }

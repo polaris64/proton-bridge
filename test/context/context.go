@@ -21,13 +21,13 @@ package context
 import (
 	"sync"
 
-	"github.com/ProtonMail/proton-bridge/internal/bridge"
-	"github.com/ProtonMail/proton-bridge/internal/config/useragent"
-	"github.com/ProtonMail/proton-bridge/internal/users"
-	"github.com/ProtonMail/proton-bridge/pkg/listener"
-	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
-	"github.com/ProtonMail/proton-bridge/test/accounts"
-	"github.com/ProtonMail/proton-bridge/test/mocks"
+	"github.com/ProtonMail/proton-bridge/v2/internal/bridge"
+	"github.com/ProtonMail/proton-bridge/v2/internal/config/useragent"
+	"github.com/ProtonMail/proton-bridge/v2/internal/users"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/listener"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
+	"github.com/ProtonMail/proton-bridge/v2/test/accounts"
+	"github.com/ProtonMail/proton-bridge/v2/test/mocks"
 	"github.com/sirupsen/logrus"
 )
 
@@ -169,10 +169,12 @@ func (ctx *TestContext) GetLastError() error {
 func (ctx *TestContext) MessagePreparationStarted(username string) {
 	ctx.pmapiController.LockEvents(username)
 }
+
 func (ctx *TestContext) MessagePreparationFinished(username string) {
 	ctx.pmapiController.UnlockEvents(username)
 }
 
 func (ctx *TestContext) CredentialsFailsOnWrite(shouldFail bool) {
-	ctx.credStore.(*fakeCredStore).failOnWrite = shouldFail //nolint:forcetypeassert
+	ctx.credStore.(*fakeCredStore).failOnWrite = shouldFail                                              //nolint:forcetypeassert
+	ctx.addCleanup(func() { ctx.credStore.(*fakeCredStore).failOnWrite = false }, "credentials-cleanup") //nolint:forcetypeassert
 }

@@ -1,3 +1,21 @@
+# Copyright (c) 2022 Proton Technologies AG
+#
+# This file is part of ProtonMail Bridge.
+#
+# ProtonMail Bridge is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ProtonMail Bridge is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ProtonMail Bridge.  If not, see <https://www.gnu.org/licenses/>.
+
+---
 image: gitlab.protontech.ch:4567/go/bridge-internal:latest
 
 before_script:
@@ -20,6 +38,7 @@ stages:
   - cache
   - test
   - build
+  - check
   - mirror
 
 # Stage: CACHE
@@ -125,6 +144,9 @@ build-qml:
     # regardless of the expiry time. Introduced in GitLab 13.0 behind a
     # disabled feature flag, and made the default behavior in GitLab 13.4.
     expire_in: 1 day
+    when: always
+    paths:
+      - bridge_*.tgz
   tags:
     - large
 
@@ -132,20 +154,16 @@ build-linux:
   extends: .build-base
   artifacts:
     name: "bridge-linux-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - bridge_*.tgz
 
 build-linux-qa:
-  extends: .build-base
+  extends: build-linux
   only:
     - web
     - branches
-  script:
-    - BUILD_TAGS="build_qa" make build
+  variables:
+    BUILD_TAGS: "build_qa"
   artifacts:
     name: "bridge-linux-qa-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - bridge_*.tgz
 
 
 .build-darwin-base:
@@ -159,6 +177,10 @@ build-linux-qa:
     - export GOPATH=~/go
     - export PATH=$GOPATH/bin:$PATH
     - export CGO_CPPFLAGS='-Wno-error -Wno-nullability-completeness -Wno-expansion-to-defined -Wno-builtin-requires-header'
+  script:
+    - go version
+    - make build
+    - git diff && git diff-index --quiet HEAD
   cache: {}
   tags:
     - macOS
@@ -167,20 +189,16 @@ build-darwin:
   extends: .build-darwin-base
   artifacts:
     name: "bridge-darwin-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - bridge_*.tgz
 
 build-darwin-qa:
   extends: .build-darwin-base
   only:
     - web
     - branches
-  script:
-    - BUILD_TAGS="build_qa" make build
+  variables:
+    BUILD_TAGS: "build_qa"
   artifacts:
     name: "bridge-darwin-qa-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - bridge_*.tgz
 
 
 .build-windows-base:
@@ -194,6 +212,9 @@ build-darwin-qa:
     - export PATH=$GOPATH/bin:$PATH
     - export MSYSTEM=
     - export PATH=$PATH:/c/grrrQt/5.13.2/mingw73_64/bin
+  script:
+    - make build
+    - git diff && git diff-index --quiet HEAD
   tags:
     - windows-bridge
 
@@ -201,20 +222,36 @@ build-windows:
   extends: .build-windows-base
   artifacts:
     name: "bridge-windows-$CI_COMMIT_SHORT_SHA"
-    paths:
-      - bridge_*.tgz
 
 build-windows-qa:
   extends: .build-windows-base
   only:
     - web
     - branches
-  script:
-    - BUILD_TAGS="build_qa" make build
+  variables:
+    BUILD_TAGS: "build_qa"
   artifacts:
     name: "bridge-windows-qa-$CI_COMMIT_SHORT_SHA"
+
+# Stage: CHECK
+check-gobinsec:
+  stage: check
+  only:
+    - branches
+  cache:
+    key: gobinsec-cache
     paths:
-      - bridge_*.tgz
+      - gobinsec-cache.yml
+    policy: pull-push
+  before_script:
+    - mkdir build
+    - tar -xzf bridge_linux_*.tgz -C build
+  script:
+    - "[ ! -f ./gobinsec-cache.yml ] && wget bridgeteam.protontech.ch/bridgeteam/gobinsec-cache.yml"
+    - cat ./gobinsec-cache.yml
+    - gobinsec -cache -config utils/gobinsec_conf.yml build/proton-bridge
+
+
 
 # Stage: MIRROR
 

@@ -20,7 +20,7 @@ package context
 import (
 	"strings"
 
-	"github.com/ProtonMail/proton-bridge/internal/users/credentials"
+	"github.com/ProtonMail/proton-bridge/v2/internal/users/credentials"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ type fakeCredStore struct {
 
 // newFakeCredStore returns a fake credentials store (optionally configured with the given credentials).
 func newFakeCredStore(initCreds ...*credentials.Credentials) (c *fakeCredStore) {
-	c = &fakeCredStore{credentials: map[string]*credentials.Credentials{}}
+	c = &fakeCredStore{credentials: map[string]*credentials.Credentials{}, failOnWrite: false}
 	for _, creds := range initCreds {
 		if creds == nil {
 			continue

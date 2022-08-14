@@ -38,7 +38,7 @@ const (
 	DraftLabel     = "8"
 	StarredLabel   = "10"
 
-	LabelTypeMailbox      = 1
+	LabelTypeMailBox      = 1
 	LabelTypeContactGroup = 2
 )
 

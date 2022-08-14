@@ -28,9 +28,9 @@ import (
 	"strings"
 
 	"github.com/ProtonMail/go-rfc5322"
-	"github.com/ProtonMail/proton-bridge/pkg/message/parser"
-	pmmime "github.com/ProtonMail/proton-bridge/pkg/mime"
-	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/message/parser"
+	pmmime "github.com/ProtonMail/proton-bridge/v2/pkg/mime"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
 	"github.com/emersion/go-message"
 	"github.com/jaytaylor/html2text"
 	"github.com/pkg/errors"
@@ -154,14 +154,6 @@ func convertForeignEncodings(p *parser.Parser) error {
 		}).
 		RegisterContentTypeHandler("text/.*", func(p *parser.Part) error {
 			return p.ConvertToUTF8()
-		}).
-		RegisterDefaultHandler(func(p *parser.Part) error {
-			// multipart/alternative, for example, can contain extra charset.
-			if _, params, _ := p.ContentType(); params != nil && params["charset"] != "" {
-				return p.ConvertToUTF8()
-			}
-
-			return nil
 		}).
 		Walk()
 }

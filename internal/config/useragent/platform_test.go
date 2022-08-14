@@ -25,16 +25,11 @@ import (
 
 func TestIsVersionCatalinaOrNewer(t *testing.T) {
 	testData := map[struct{ version string }]bool{
-		{""}:         false,
-		{"9.0.0"}:    false,
-		{"9.15.0"}:   false,
-		{"10.13.0"}:  false,
-		{"10.14.0"}:  false,
-		{"10.14.99"}: false,
-		{"10.15.0"}:  true,
-		{"10.16.0"}:  true,
-		{"11.0.0"}:   true,
-		{"11.1"}:     true,
+		{""}:       false,
+		{"18.0.0"}: false,
+		{"19.0.0"}: true,
+		{"20.0.0"}: true,
+		{"21.0.0"}: true,
 	}
 
 	for args, exp := range testData {
@@ -45,16 +40,11 @@ func TestIsVersionCatalinaOrNewer(t *testing.T) {
 
 func TestIsVersionBigSurOrNewer(t *testing.T) {
 	testData := map[struct{ version string }]bool{
-		{""}:         false,
-		{"9.0.0"}:    false,
-		{"9.15.0"}:   false,
-		{"10.13.0"}:  false,
-		{"10.14.0"}:  false,
-		{"10.14.99"}: false,
-		{"10.15.0"}:  false,
-		{"10.16.0"}:  true,
-		{"11.0.0"}:   true,
-		{"11.1"}:     true,
+		{""}:       false,
+		{"18.0.0"}: false,
+		{"19.0.0"}: false,
+		{"20.0.0"}: true,
+		{"21.0.0"}: true,
 	}
 
 	for args, exp := range testData {

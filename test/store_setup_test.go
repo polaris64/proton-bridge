@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
 	"github.com/cucumber/godog"
 )
 
@@ -57,7 +57,7 @@ func thereIsUserWithMailbox(bddUserID, mailboxName string) error {
 	}
 	err := ctx.GetPMAPIController().AddUserLabel(account.Username(), &pmapi.Label{
 		Name: mailboxName,
-		Type: pmapi.LabelTypeMailbox,
+		Type: pmapi.LabelTypeMailBox,
 	})
 	if err != nil {
 		return internalError(err, "adding label %s for %s", mailboxName, account.Username())

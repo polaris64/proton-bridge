@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
@@ -128,7 +128,7 @@ func (mc *mailboxCounts) getPMLabel() *pmapi.Label {
 		Path:      mc.LabelName,
 		Color:     mc.Color,
 		Order:     mc.Order,
-		Type:      pmapi.LabelTypeMailbox,
+		Type:      pmapi.LabelTypeMailBox,
 		Exclusive: pmapi.Boolean(mc.IsFolder),
 	}
 }

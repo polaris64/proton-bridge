@@ -32,11 +32,11 @@ import (
 	"time"
 
 	"github.com/ProtonMail/gopenpgp/v2/crypto"
-	"github.com/ProtonMail/proton-bridge/internal/events"
-	"github.com/ProtonMail/proton-bridge/pkg/listener"
-	pkgMsg "github.com/ProtonMail/proton-bridge/pkg/message"
-	"github.com/ProtonMail/proton-bridge/pkg/message/parser"
-	"github.com/ProtonMail/proton-bridge/pkg/pmapi"
+	"github.com/ProtonMail/proton-bridge/v2/internal/events"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/listener"
+	pkgMsg "github.com/ProtonMail/proton-bridge/v2/pkg/message"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/message/parser"
+	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
 	goSMTPBackend "github.com/emersion/go-smtp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -313,16 +313,16 @@ func (su *smtpUser) Send(returnPath string, to []string, messageReader io.Reader
 
 	startTime := time.Now()
 	for isSending && time.Since(startTime) < 90*time.Second {
-		log.Debug("Message is still in send queue, waiting for a bit")
+		log.Warn("Message is still in send queue, waiting for a bit")
 		time.Sleep(15 * time.Second)
 		isSending, wasSent = su.backend.sendRecorder.isSendingOrSent(su.client(), sendRecorderMessageHash)
 	}
 	if isSending {
-		log.Debug("Message is still in send queue, returning error to prevent client from adding it to the sent folder prematurely")
+		log.Warn("Message is still in send queue, returning error to prevent client from adding it to the sent folder prematurely")
 		return errors.New("original message is still being sent")
 	}
 	if wasSent {
-		log.Debug("Message was already sent")
+		log.Warn("Message was already sent")
 		return nil
 	}
 

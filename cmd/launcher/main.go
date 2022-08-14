@@ -20,22 +20,22 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ProtonMail/gopenpgp/v2/crypto"
-	"github.com/ProtonMail/proton-bridge/internal/config/useragent"
-	"github.com/ProtonMail/proton-bridge/internal/constants"
-	"github.com/ProtonMail/proton-bridge/internal/crash"
-	"github.com/ProtonMail/proton-bridge/internal/locations"
-	"github.com/ProtonMail/proton-bridge/internal/logging"
-	"github.com/ProtonMail/proton-bridge/internal/sentry"
-	"github.com/ProtonMail/proton-bridge/internal/updater"
-	"github.com/ProtonMail/proton-bridge/internal/versioner"
+	"github.com/ProtonMail/proton-bridge/v2/internal/config/useragent"
+	"github.com/ProtonMail/proton-bridge/v2/internal/constants"
+	"github.com/ProtonMail/proton-bridge/v2/internal/crash"
+	"github.com/ProtonMail/proton-bridge/v2/internal/locations"
+	"github.com/ProtonMail/proton-bridge/v2/internal/logging"
+	"github.com/ProtonMail/proton-bridge/v2/internal/sentry"
+	"github.com/ProtonMail/proton-bridge/v2/internal/updater"
+	"github.com/ProtonMail/proton-bridge/v2/internal/versioner"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/execabs"
 )
 
 const (
@@ -98,7 +98,7 @@ func main() { //nolint:funlen
 		logrus.WithError(err).Fatal("Failed to determine path to launcher")
 	}
 
-	cmd := exec.Command(exe, appendLauncherPath(launcher, os.Args[1:])...) //nolint:gosec
+	cmd := execabs.Command(exe, appendLauncherPath(launcher, os.Args[1:])...) //nolint:gosec
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

@@ -650,6 +650,12 @@ Window {
                 id: settingsTab
                 ColumnLayout {
                     RowLayout {
+                        Label {colorScheme  : root.colorScheme ; text : "GOOS     : "}
+                        Button {colorScheme : root.colorScheme ; text : "Linux"   ; onClicked : root.goos = "linux"   ; enabled: root.goos != "linux"}
+                        Button {colorScheme : root.colorScheme ; text : "Windows" ; onClicked : root.goos = "windows" ; enabled: root.goos != "windows"}
+                        Button {colorScheme : root.colorScheme ; text : "macOS"   ; onClicked : root.goos = "darwin"  ; enabled: root.goos != "darwin"}
+                    }
+                    RowLayout {
                         Label {colorScheme: root.colorScheme; text: "Automatic updates:"}
                         Toggle {colorScheme: root.colorScheme; checked: root.isAutomaticUpdateOn; onClicked: root.isAutomaticUpdateOn = !root.isAutomaticUpdateOn}
                     }
@@ -836,7 +842,7 @@ Window {
     property url logsPath: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
     property url licensePath: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
     property url releaseNotesLink: Qt.resolvedUrl("https://protonmail.com/download/bridge/early_releases.html")
-    property url dependencyLicensesLink: Qt.resolvedUrl("https://github.com/ProtonMail/proton-bridge/blob/master/COPYING_NOTES.md#dependencies")
+    property url dependencyLicensesLink: Qt.resolvedUrl("https://github.com/ProtonMail/proton-bridge/v2/blob/master/COPYING_NOTES.md#dependencies")
     property url landingPageLink: Qt.resolvedUrl("https://protonmail.com/bridge")
 
     property string colorSchemeName: "light"

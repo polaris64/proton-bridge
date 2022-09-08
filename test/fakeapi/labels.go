@@ -20,6 +20,7 @@ package fakeapi
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ProtonMail/proton-bridge/v2/pkg/pmapi"
 )
@@ -87,16 +88,23 @@ func (api *FakePMAPI) listLabels(_ context.Context, labeType string, route strin
 	if err := api.checkAndRecordCall(GET, route+"/"+labeType, nil); err != nil {
 		return nil, err
 	}
-	return api.labels, nil
+	return append([]*pmapi.Label{}, api.labels...), nil
 }
 
 func (api *FakePMAPI) createLabel(_ context.Context, label *pmapi.Label, route string) (*pmapi.Label, error) {
 	if err := api.checkAndRecordCall(POST, route, &pmapi.LabelReq{Label: label}); err != nil {
 		return nil, err
 	}
+
+	// API blocks certain names
+	switch strings.ToLower(label.Name) {
+	case "inbox", "drafts", "trash", "spam", "starred":
+		return nil, fmt.Errorf("Invalid name") //nolint:stylecheck
+	}
+
 	for _, existingLabel := range api.labels {
 		if existingLabel.Name == label.Name {
-			return nil, fmt.Errorf("folder or label %s already exists", label.Name)
+			return nil, fmt.Errorf("A label or folder with this name already exists") //nolint:stylecheck
 		}
 	}
 	prefix := "label"

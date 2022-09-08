@@ -673,6 +673,10 @@ Window {
                         Toggle {colorScheme: root.colorScheme; checked: root.isDoHEnabled; onClicked: root.isDoHEnabled = !root.isDoHEnabled}
                     }
                     RowLayout {
+                        Label {colorScheme: root.colorScheme; text: "All Mail disabled:"}
+                        Toggle {colorScheme: root.colorScheme; checked: root.isAllMailVisible; onClicked: root.isAllMailVisible = !root.isAllMailVisible}
+                    }
+                    RowLayout {
                         Label {colorScheme: root.colorScheme; text: "Ports:"}
                         TextField {
                             colorScheme:root.colorScheme
@@ -810,6 +814,13 @@ Window {
         console.debug("-> DoH", makeItActive, root.isDoHEnabled)
         root.isDoHEnabled = makeItActive
     }
+
+    property bool isAllMailVisible : true
+    function changeIsAllMailVisible(isVisible){
+        console.debug("-> All Mail Visible", isVisible, root.isAllMailVisible)
+        root.isAllMailVisible = isVisible
+    }
+
 
     property bool useSSLforSMTP: false
     function toggleUseSSLforSMTP(makeItActive){

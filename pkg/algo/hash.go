@@ -15,21 +15,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
 
-package message
+package algo
 
 import (
-	"github.com/ProtonMail/proton-bridge/v2/pkg/algo"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 )
 
-type boundary struct {
-	val string
+func Hash256(b []byte) []byte {
+	h := sha256.Sum256(b)
+	return h[:]
 }
 
-func newBoundary(seed string) *boundary {
-	return &boundary{val: seed}
+func HashBase64SHA256(s string) string {
+	return base64.StdEncoding.EncodeToString(
+		Hash256([]byte(s)),
+	)
 }
 
-func (bw *boundary) gen() string {
-	bw.val = algo.HashHexSHA256(bw.val)
-	return bw.val
+func HashHexSHA256(s string) string {
+	return hex.EncodeToString(
+		Hash256([]byte(s)),
+	)
 }

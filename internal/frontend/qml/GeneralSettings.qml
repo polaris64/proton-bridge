@@ -157,6 +157,19 @@ SettingsView {
     }
 
     SettingsItem {
+        id: allMail
+        visible: root._isAdvancedShown
+        colorScheme: root.colorScheme
+        text: qsTr("Show All Mail")
+        description: qsTr("Choose to list the All Mail folder in your local client.")
+        type: SettingsItem.Toggle
+        checked: root.backend.isAllMailVisible
+        onClicked: root.notifications.askChangeAllMailVisibility(root.backend.isAllMailVisible)
+
+        Layout.fillWidth: true
+    }
+
+    SettingsItem {
         id: ports
         visible: root._isAdvancedShown
         colorScheme: root.colorScheme

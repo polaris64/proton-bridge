@@ -15,20 +15,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Proton Mail Bridge. If not, see <https://www.gnu.org/licenses/>.
 
-package cache
+package imap
 
-import (
-	"crypto/sha256"
-	"encoding/hex"
-)
+import "sync"
 
-func getHash(name string) string {
-	hash := sha256.New()
+type safeMapOfStrings struct {
+	data  map[string]string
+	mutex sync.RWMutex
+}
 
-	if _, err := hash.Write([]byte(name)); err != nil {
-		// sha256.Write always returns nill err so this should never happen
-		panic(err)
+func newSafeMapOfString() safeMapOfStrings {
+	return safeMapOfStrings{
+		data:  map[string]string{},
+		mutex: sync.RWMutex{},
 	}
+}
 
-	return hex.EncodeToString(hash.Sum(nil))
+func (m *safeMapOfStrings) get(key string) string {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.data[key]
+}
+
+func (m *safeMapOfStrings) set(key, value string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.data[key] = value
 }

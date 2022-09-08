@@ -10,7 +10,7 @@ TARGET_OS?=${GOOS}
 .PHONY: build build-nogui build-launcher versioner hasher
 
 # Keep version hardcoded so app build works also without Git repository.
-BRIDGE_APP_VERSION?=2.2.2+git
+BRIDGE_APP_VERSION?=2.3.0+git
 APP_VERSION:=${BRIDGE_APP_VERSION}
 SRC_ICO:=bridge.ico
 SRC_ICNS:=Bridge.icns
@@ -166,7 +166,7 @@ update-qt-docs:
 LINTVER:="v1.39.0"
 LINTSRC:="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 
-install-dev-dependencies: install-devel-tools install-linter install-go-mod-outdated
+install-dev-dependencies: install-devel-tools install-linter
 
 install-devel-tools: check-has-go
 	go get -v github.com/golang/mock/gomock
